@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  qdrant-mcp:
+    build: .
+    image: qdrant-mcp:secure
+    container_name: qdrant-mcp-secure
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:docker-default
+      - seccomp:unconfined  # Required for Qdrant
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Read-only root filesystem with specific writable directories
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+      - /var/log/supervisor
+    
+    volumes:
+      # Persistent storage for Qdrant
+      - qdrant-storage:/qdrant/storage:rw
+      - qdrant-snapshots:/qdrant/snapshots:rw
+    
+    ports:
+      - "127.0.0.1:8000:8000"  # REST API - bind only to localhost
+      - "127.0.0.1:8001:8001"  # MCP API - bind only to localhost
+      - "127.0.0.1:6333:6333"  # Qdrant HTTP - bind only to localhost
+    
+    environment:
+      - QDRANT_HOST=localhost
+      - QDRANT_PORT=6333
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - MCP_PORT=8001
+      # Security: Disable telemetry
+      - QDRANT__TELEMETRY_DISABLED=true
+    
+    # Run as non-root user (defined in Dockerfile)
+    user: "1000:1000"
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Network isolation
+    networks:
+      - qdrant-net
+
+networks:
+  qdrant-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: qdrant-br
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+volumes:
+  qdrant-storage:
+    driver: local
+  qdrant-snapshots:
+    driver: local

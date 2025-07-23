@@ -15,22 +15,43 @@ A unified Docker container that runs both a Qdrant vector database server and pr
 ### Build the Docker Image
 
 ```bash
+# Standard build
 docker build -t qdrant-mcp .
+
+# Build with security scanning
+./build-secure.sh
 ```
 
 ### Run the Container
 
 ```bash
-# Run with default settings
+# Basic usage
 docker run -p 8000:8000 -p 8001:8001 -p 6333:6333 -v qdrant-data:/qdrant/storage qdrant-mcp
 
-# Run with custom settings
-docker run -p 8000:8000 -p 8001:8001 -p 6333:6333 \
+# Secure production deployment (recommended)
+docker run -d --name qdrant-mcp \
+  --security-opt no-new-privileges:true \
+  --read-only \
+  --tmpfs /tmp --tmpfs /var/run --tmpfs /var/log/supervisor \
   -v qdrant-data:/qdrant/storage \
-  -e API_PORT=8000 \
-  -e MCP_PORT=8001 \
-  qdrant-mcp
+  -p 127.0.0.1:8000:8000 \
+  -p 127.0.0.1:8001:8001 \
+  -p 127.0.0.1:6333:6333 \
+  qdrant-mcp:secure
+
+# Using Docker Compose with security settings
+docker-compose -f docker-compose.secure.yml up -d
 ```
+
+## Security Features
+
+- **Rootless Container**: Runs as non-root user (UID 1000)
+- **Multi-stage Build**: Minimizes image size and attack surface
+- **Read-only Filesystem**: Uses read-only root with specific tmpfs mounts
+- **Resource Limits**: CPU and memory constraints in docker-compose
+- **Health Checks**: Built-in health monitoring for all services
+- **Security Scanning**: Compatible with Trivy and other scanners
+- **Minimal Dependencies**: Only essential runtime packages included
 
 ## REST API Endpoints
 

@@ -1,0 +1,64 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+dist/
+build/
+venv/
+env/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Tests
+tests/
+test_*.py
+*_test.py
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# Development
+.env
+.env.*
+*.log
+*.swp
+*.swo
+*~
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Hooks (they're installed separately)
+hooks/
+
+# Other
+*.bak
+*.tmp
+*.temp
