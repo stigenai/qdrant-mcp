@@ -30,7 +30,7 @@ cfg: DictConfig | None = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> Any:
     """Manage application lifecycle."""
     global embedder, mcp_handler
     # Startup
@@ -78,9 +78,9 @@ class VectorSearchRequest(BaseModel):
     limit: int | None = None
     score_threshold: float | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        if cfg is not None:
+        if cfg is not None and hasattr(cfg, "vector"):
             if self.collection is None:
                 self.collection = cfg.vector.collection_name
             if self.limit is None:
@@ -93,9 +93,9 @@ class VectorUpsertRequest(BaseModel):
     collection: str | None = None
     points: list[VectorPoint]
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        if cfg is not None and self.collection is None:
+        if cfg is not None and hasattr(cfg, "vector") and self.collection is None:
             self.collection = cfg.vector.collection_name
 
 
@@ -104,9 +104,9 @@ class CollectionInfo(BaseModel):
     vector_size: int | None = None
     distance: str = "cosine"
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        if cfg is not None and self.vector_size is None:
+        if cfg is not None and hasattr(cfg, "vector") and self.vector_size is None:
             self.vector_size = cfg.vector.vector_size
 
 
@@ -144,6 +144,11 @@ async def wait_for_qdrant(max_retries: int = 30, delay: int = 1) -> bool:
 
 async def ensure_default_collection() -> None:
     """Ensure the default collection exists."""
+    if qdrant_client is None:
+        raise RuntimeError("Qdrant client not initialized")
+    if cfg is None:
+        raise RuntimeError("Configuration not loaded")
+
     try:
         qdrant_client.get_collection(cfg.vector.collection_name)
         logger.info(f"Collection '{cfg.vector.collection_name}' already exists")
@@ -154,10 +159,6 @@ async def ensure_default_collection() -> None:
             "euclidean": models.Distance.EUCLID,
             "dot": models.Distance.DOT,
         }
-        if qdrant_client is None:
-            raise HTTPException(
-                status_code=500, detail="Qdrant client not initialized"
-            ) from None
         qdrant_client.create_collection(
             collection_name=cfg.vector.collection_name,
             vectors_config=models.VectorParams(
@@ -171,8 +172,10 @@ async def ensure_default_collection() -> None:
 
 # REST API Endpoints
 @app.get("/health")
-async def health_check() -> dict[str, str]:
+async def health_check() -> dict[str, Any]:
     """Health check endpoint."""
+    if cfg is None:
+        raise HTTPException(status_code=500, detail="Configuration not loaded")
     return {
         "status": "healthy",
         "version": cfg.mcp.server_version,
@@ -283,14 +286,20 @@ async def upsert_vectors(request: VectorUpsertRequest) -> dict[str, Any]:
 async def search_vectors(request: VectorSearchRequest) -> dict[str, Any]:
     """Search for similar vectors."""
     try:
-        # Generate query embedding
-        query_vector = embedder.encode(request.query).tolist()
-
-        # Search in Qdrant
+        # Check dependencies
         if qdrant_client is None:
             raise HTTPException(status_code=500, detail="Qdrant client not initialized")
         if embedder is None:
             raise HTTPException(status_code=500, detail="Embedder not initialized")
+        if request.collection is None:
+            raise HTTPException(status_code=400, detail="Collection name is required")
+        if request.limit is None:
+            raise HTTPException(status_code=400, detail="Limit is required")
+
+        # Generate query embedding
+        query_vector = embedder.encode(request.query).tolist()
+
+        # Search in Qdrant
         results = qdrant_client.search(
             collection_name=request.collection,
             query_vector=query_vector,
@@ -313,7 +322,7 @@ async def search_vectors(request: VectorSearchRequest) -> dict[str, Any]:
 
 # MCP endpoint (when running as MCP server)
 @app.post("/mcp")
-async def handle_mcp_request(request: dict) -> dict[str, Any]:
+async def handle_mcp_request(request: dict[str, Any]) -> dict[str, Any]:
     """Handle MCP protocol requests."""
     if not mcp_handler:
         raise HTTPException(status_code=503, detail="MCP handler not initialized")
@@ -330,12 +339,14 @@ async def run_mcp_mode() -> None:
     """Run in MCP mode."""
     global qdrant_client, embedder, mcp_handler
 
+    # Check configuration
+    if cfg is None:
+        raise RuntimeError("Configuration not loaded")
+
     # Initialize Qdrant client
     qdrant_client = QdrantClient(host=cfg.qdrant.host, port=cfg.qdrant.port)
 
     # Initialize embedder
-    if cfg is None:
-        raise RuntimeError("Configuration not loaded")
     embedder = SentenceTransformer(cfg.vector.embedding_model)
 
     # Initialize MCP handler

@@ -22,7 +22,7 @@ cfg: DictConfig | None = None
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     """Initialize MCP handler on startup."""
     global mcp_handler
 
@@ -186,6 +186,21 @@ async def handle_mcp_request(request: Request) -> Response:
             tool_arguments = params.get("arguments", {})
 
             # Call the appropriate handler method
+            if mcp_handler is None:
+                return Response(
+                    content=json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": -32603,
+                                "message": "MCP handler not initialized",
+                            },
+                            "id": request_id,
+                        }
+                    ),
+                    media_type="application/json",
+                )
+
             if tool_name == "qdrant-store":
                 results = await mcp_handler._handle_store(tool_arguments)
             elif tool_name == "qdrant-find":

@@ -309,9 +309,9 @@ class MCPHandler:
         """Run MCP server in stdio mode."""
         logger.info("Starting MCP server in stdio mode...")
         await self.server.run(
-            read_stream=sys.stdin.buffer,
-            write_stream=sys.stdout.buffer,
-            initialization_options=None,
+            read_stream=sys.stdin.buffer,  # type: ignore
+            write_stream=sys.stdout.buffer,  # type: ignore
+            initialization_options=None,  # type: ignore
         )
 
     async def handle_request(self, request: dict) -> dict:
