@@ -1,6 +1,6 @@
 # Multi-stage build for smaller final image
 # Stage 1: Build stage with full dependencies
-FROM python:3.11-slim AS builder
+FROM python:3.13-slim AS builder
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -25,7 +25,7 @@ RUN uv pip install --system --no-cache -r pyproject.toml
 FROM qdrant/qdrant:latest AS qdrant-base
 
 # Stage 3: Final minimal runtime image
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
