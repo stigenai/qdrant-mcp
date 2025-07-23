@@ -103,6 +103,16 @@ extend-exclude = '''
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -116,14 +126,6 @@ ignore = [
     "E501", # line too long
     "B008", # do not perform function calls in argument defaults
     "W191", # indentation contains tabs
-]
-exclude = [
-    ".git",
-    "__pycache__",
-    "build",
-    "dist",
-    ".venv",
-    "venv",
 ]
 
 [tool.mypy]

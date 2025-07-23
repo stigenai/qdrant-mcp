@@ -2,14 +2,14 @@
 """Replaces long transcript messages with vector stubs using Qdrant MCP API."""
 import json
 import os
+import pathlib
 import sys
 import uuid
-import pathlib
-import tiktoken
+import warnings
+
 import orjson
 import requests
-from typing import Optional
-import warnings
+import tiktoken
 import urllib3
 
 # Configuration
@@ -111,7 +111,7 @@ def ensure_collection_exists():
         return False
 
 
-def store_vector(content: str, role: str, timestamp: str = "") -> Optional[str]:
+def store_vector(content: str, role: str, timestamp: str = "") -> str | None:
     """Store content as vector in Qdrant and return the ID."""
     uid = str(uuid.uuid4())
     verify = get_ssl_config()

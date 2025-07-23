@@ -1,13 +1,12 @@
 """Unit tests for REST API endpoints."""
 
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch, AsyncMock
-import json
-import uuid
-from qdrant_client import models
-import server
+
 import config
+import server
 
 
 class TestRestAPI:

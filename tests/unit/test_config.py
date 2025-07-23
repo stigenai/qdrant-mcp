@@ -1,8 +1,8 @@
 """Unit tests for config module."""
 
-import pytest
 import os
 from unittest.mock import patch
+
 import config
 
 

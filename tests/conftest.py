@@ -1,12 +1,13 @@
 """Shared pytest fixtures and configuration."""
 
-import pytest
+import os
+import sys
+from unittest.mock import AsyncMock, Mock
+
 import numpy as np
-from unittest.mock import Mock, AsyncMock, MagicMock
+import pytest
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
-import sys
-import os
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

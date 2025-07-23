@@ -1,11 +1,12 @@
 """Unit tests for MCP handler."""
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
 import uuid
+from unittest.mock import Mock, patch
+
+import pytest
 from mcp.types import TextContent
+
 from mcp_handler import MCPHandler
-import config
 
 
 class TestMCPHandler:

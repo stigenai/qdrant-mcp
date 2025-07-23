@@ -1,18 +1,17 @@
 import asyncio
-import json
 import logging
 import sys
 import time
 import uuid
-from typing import Dict, List, Optional, Any
 from contextlib import asynccontextmanager
+from typing import Any
 
 import hydra
-from omegaconf import DictConfig
 import tiktoken
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from omegaconf import DictConfig
 from pydantic import BaseModel
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
@@ -23,11 +22,11 @@ from mcp_handler import MCPHandler
 logger = logging.getLogger(__name__)
 
 # Global instances
-qdrant_client: Optional[QdrantClient] = None
-embedder: Optional[SentenceTransformer] = None
+qdrant_client: QdrantClient | None = None
+embedder: SentenceTransformer | None = None
 tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
-mcp_handler: Optional[MCPHandler] = None
-cfg: Optional[DictConfig] = None
+mcp_handler: MCPHandler | None = None
+cfg: DictConfig | None = None
 
 
 @asynccontextmanager
@@ -62,9 +61,9 @@ app = FastAPI(title="Qdrant MCP Server", lifespan=lifespan)
 # Pydantic models
 class VectorPoint(BaseModel):
     id: str
-    vector: Optional[List[float]] = None
-    content: Optional[str] = None
-    payload: Dict[str, Any] = {}
+    vector: list[float] | None = None
+    content: str | None = None
+    payload: dict[str, Any] = {}
 
 
 class VectorSearchRequest(BaseModel):
@@ -85,7 +84,7 @@ class VectorSearchRequest(BaseModel):
 
 class VectorUpsertRequest(BaseModel):
     collection: str = None
-    points: List[VectorPoint]
+    points: list[VectorPoint]
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -179,7 +178,9 @@ async def get_collection(collection_name: str):
             "config": collection.config.dict(),
         }
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Collection not found: {str(e)}")
+        raise HTTPException(
+            status_code=404, detail=f"Collection not found: {str(e)}"
+        ) from e
 
 
 @app.post("/collections")
@@ -205,7 +206,7 @@ async def create_collection(collection: CollectionInfo):
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"Failed to create collection: {str(e)}"
-        )
+        ) from e
 
 
 @app.post("/vectors/upsert")
@@ -243,7 +244,7 @@ async def upsert_vectors(request: VectorUpsertRequest):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to upsert vectors: {str(e)}"
-        )
+        ) from e
 
 
 @app.post("/vectors/search")
@@ -271,7 +272,7 @@ async def search_vectors(request: VectorSearchRequest):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to search vectors: {str(e)}"
-        )
+        ) from e
 
 
 # MCP endpoint (when running as MCP server)
@@ -286,7 +287,7 @@ async def handle_mcp_request(request: dict):
         return response
     except Exception as e:
         logger.error(f"MCP request failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 async def run_mcp_mode():

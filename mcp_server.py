@@ -1,13 +1,10 @@
-import asyncio
 import json
 import logging
-import os
-from typing import Any, Dict, Optional
 
 import hydra
-from omegaconf import DictConfig
 import uvicorn
 from fastapi import FastAPI, Request, Response
+from omegaconf import DictConfig
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
@@ -21,7 +18,7 @@ app = FastAPI(title="Qdrant MCP HTTP Server")
 
 # Global instances
 mcp_handler = None
-cfg: Optional[DictConfig] = None
+cfg: DictConfig | None = None
 
 
 @app.on_event("startup")

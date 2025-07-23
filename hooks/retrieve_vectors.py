@@ -4,9 +4,10 @@
 import json
 import os
 import sys
-import requests
-from typing import List, Dict, Any
 import warnings
+from typing import Any
+
+import requests
 import urllib3
 
 # Configuration
@@ -73,7 +74,7 @@ def get_ssl_config():
     return True
 
 
-def search_vectors(query: str) -> List[Dict[str, Any]]:
+def search_vectors(query: str) -> list[dict[str, Any]]:
     """Search for relevant vectors using the API."""
     verify = get_ssl_config()
 
@@ -137,7 +138,6 @@ def main():
             query = hook_data.get("prompt", "")
         elif hook_event_name == "PreToolUse":
             # Extract query from tool input
-            tool_name = hook_data.get("tool_name", "")
             tool_input = hook_data.get("tool_input", {})
 
             # Try to extract meaningful query from tool input

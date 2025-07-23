@@ -1,11 +1,10 @@
 """Unit tests for MCP HTTP server."""
 
+from unittest.mock import Mock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch, AsyncMock
-import json
-from mcp.types import TextContent
-import mcp_server
+
 import config
 
 

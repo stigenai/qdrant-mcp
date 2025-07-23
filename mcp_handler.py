@@ -1,21 +1,17 @@
-import asyncio
 import json
 import logging
 import sys
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import mcp.server as mcp
 from mcp.server import Server
 from mcp.types import (
-    Tool,
     TextContent,
-    CallToolResult,
-    ListToolsResult,
+    Tool,
 )
+from omegaconf import DictConfig
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
-from omegaconf import DictConfig
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +21,7 @@ class MCPHandler:
         self,
         qdrant_client: QdrantClient,
         embedder: SentenceTransformer,
-        config: Optional[DictConfig] = None,
+        config: DictConfig | None = None,
     ):
         self.qdrant_client = qdrant_client
         self.embedder = embedder
@@ -37,7 +33,7 @@ class MCPHandler:
         """Set up MCP protocol handlers."""
 
         @self.server.list_tools()
-        async def list_tools() -> List[Tool]:
+        async def list_tools() -> list[Tool]:
             """List available MCP tools."""
             return [
                 Tool(
@@ -138,7 +134,7 @@ class MCPHandler:
             ]
 
         @self.server.call_tool()
-        async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+        async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
             try:
                 if name == "qdrant-store":
@@ -155,7 +151,7 @@ class MCPHandler:
                 logger.error(f"Tool {name} failed: {e}")
                 return [TextContent(text=f"Error: {str(e)}")]
 
-    async def _handle_store(self, arguments: Dict[str, Any]) -> List[TextContent]:
+    async def _handle_store(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Handle qdrant-store tool."""
         content = arguments.get("content", "")
         metadata = arguments.get("metadata", {})
@@ -178,7 +174,7 @@ class MCPHandler:
             # Ensure collection exists
             try:
                 self.qdrant_client.get_collection(collection)
-            except:
+            except Exception:
                 # Create collection if it doesn't exist
                 self.qdrant_client.create_collection(
                     collection_name=collection,
@@ -204,7 +200,7 @@ class MCPHandler:
         except Exception as e:
             return [TextContent(text=f"Failed to store content: {str(e)}")]
 
-    async def _handle_find(self, arguments: Dict[str, Any]) -> List[TextContent]:
+    async def _handle_find(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Handle qdrant-find tool."""
         query = arguments.get("query", "")
         limit = arguments.get("limit", self.config.vector.top_k if self.config else 10)
@@ -255,7 +251,7 @@ class MCPHandler:
         except Exception as e:
             return [TextContent(text=f"Failed to search: {str(e)}")]
 
-    async def _handle_list_collections(self) -> List[TextContent]:
+    async def _handle_list_collections(self) -> list[TextContent]:
         """Handle qdrant-list-collections tool."""
         try:
             collections = self.qdrant_client.get_collections()
@@ -266,7 +262,7 @@ class MCPHandler:
 
             return [
                 TextContent(
-                    text=f"Collections:\n"
+                    text="Collections:\n"
                     + "\n".join(f"- {c}" for c in collection_names)
                 )
             ]
@@ -274,8 +270,8 @@ class MCPHandler:
             return [TextContent(text=f"Failed to list collections: {str(e)}")]
 
     async def _handle_create_collection(
-        self, arguments: Dict[str, Any]
-    ) -> List[TextContent]:
+        self, arguments: dict[str, Any]
+    ) -> list[TextContent]:
         """Handle qdrant-create-collection tool."""
         name = arguments.get("name", "")
         vector_size = arguments.get(

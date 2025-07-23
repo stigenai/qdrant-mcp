@@ -2,10 +2,10 @@
 """Test script for API-based hooks."""
 
 import json
-import subprocess
-import tempfile
 import os
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 # Configuration
@@ -105,12 +105,12 @@ def test_precompact_hook():
 
         if result.returncode == 0:
             output = json.loads(result.stdout)
-            print(f"✓ Hook completed successfully")
+            print("✓ Hook completed successfully")
             print(f"  - Vectorized: {output.get('vectorized', 0)} messages")
             print(f"  - Total messages: {output.get('total_messages', 0)}")
 
             # Check if transcript was modified
-            with open(transcript_path, "r") as f:
+            with open(transcript_path) as f:
                 modified_content = f.read()
                 if "[[VEC:" in modified_content:
                     print("✓ Vector stubs created in transcript")

@@ -1,8 +1,8 @@
-import os
 import json
-import yaml
+import os
 from pathlib import Path
-from typing import Optional, Dict, Any
+
+import yaml
 from pydantic import BaseModel, Field, validator
 
 # Default paths
@@ -102,17 +102,17 @@ class LoggingConfig(BaseModel):
 class SecurityConfig(BaseModel):
     """Security configuration."""
 
-    api_key: Optional[str] = Field(
+    api_key: str | None = Field(
         default=None, description="Optional API key for authentication"
     )
     enable_tls: bool = Field(default=False, description="Enable TLS/HTTPS")
-    tls_cert_path: Optional[str] = Field(
+    tls_cert_path: str | None = Field(
         default=None, description="Path to TLS certificate"
     )
-    tls_key_path: Optional[str] = Field(
+    tls_key_path: str | None = Field(
         default=None, description="Path to TLS private key"
     )
-    allowed_ips: Optional[list[str]] = Field(
+    allowed_ips: list[str] | None = Field(
         default=None, description="Whitelist of allowed IPs"
     )
     rate_limit_per_minute: int = Field(
@@ -138,7 +138,7 @@ class Config(BaseModel):
             print(f"Config file not found at {config_path}, using defaults")
             return cls()
 
-        with open(path, "r") as f:
+        with open(path) as f:
             if path.suffix in [".yaml", ".yml"]:
                 data = yaml.safe_load(f)
             elif path.suffix == ".json":
