@@ -4,9 +4,9 @@ A unified Docker container that runs both a Qdrant vector database server and pr
 
 ## Features
 
-- **Single Docker Container**: Runs both Qdrant server and API wrapper in one container
-- **REST API**: Compatible with Claude vector hooks for storing and searching vectors
-- **MCP Server**: Can be connected via claude-code for semantic memory capabilities
+- **Single Docker Container**: Runs Qdrant server, REST API, and MCP HTTP server in one container
+- **REST API**: Compatible with Claude vector hooks for storing and searching vectors (port 8000)
+- **MCP HTTP Server**: Accessible via mcp-remote for semantic memory capabilities (port 8001)
 - **Auto-embedding**: Automatically generates embeddings using sentence-transformers
 - **Claude Hooks Compatible**: Works with existing Claude vector hooks in `~/.claude/hooks/`
 
@@ -22,12 +22,13 @@ docker build -t qdrant-mcp .
 
 ```bash
 # Run with default settings
-docker run -p 8000:8000 -v qdrant-data:/qdrant/storage qdrant-mcp
+docker run -p 8000:8000 -p 8001:8001 -p 6333:6333 -v qdrant-data:/qdrant/storage qdrant-mcp
 
 # Run with custom settings
-docker run -p 8000:8000 \
+docker run -p 8000:8000 -p 8001:8001 -p 6333:6333 \
   -v qdrant-data:/qdrant/storage \
   -e API_PORT=8000 \
+  -e MCP_PORT=8001 \
   qdrant-mcp
 ```
 
@@ -84,9 +85,29 @@ When connected as an MCP server, the following tools are available:
 - **qdrant-list-collections**: List all collections
 - **qdrant-create-collection**: Create a new collection
 
-### Claude Code Configuration
+### MCP HTTP Server Configuration
 
-Add to your Claude Code settings:
+The MCP server runs on port 8001 and can be accessed via mcp-remote:
+
+```bash
+# Install mcp-remote if not already installed
+npm install -g @modelcontextprotocol/server-mcp-remote
+
+# Add to your Claude Code settings:
+```
+
+```json
+{
+  "mcpServers": {
+    "qdrant-mcp": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-mcp-remote", "http://localhost:8001"]
+    }
+  }
+}
+```
+
+Or use the stdio mode (requires container to be installed locally):
 
 ```json
 {
@@ -105,6 +126,7 @@ Add to your Claude Code settings:
 - `QDRANT_PORT`: Qdrant server port (default: 6333)
 - `API_HOST`: API server host (default: 0.0.0.0)
 - `API_PORT`: API server port (default: 8000)
+- `MCP_PORT`: MCP HTTP server port (default: 8001)
 
 ## Claude Hooks Integration
 
