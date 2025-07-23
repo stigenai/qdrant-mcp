@@ -56,7 +56,7 @@ jobs:
           # Start container in background
           docker run -d --name test-container \
             -p 8000:8000 -p 8001:8001 -p 6333:6333 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+            ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
           
           # Wait for services to start
           echo "Waiting for services to start..."
@@ -78,7 +78,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const tag = '${{ steps.meta.outputs.version }}';
+            const tags = ${{ steps.meta.outputs.json }}.tags;
+            const tag = tags[0].replace('ghcr.io/stigenai/qdrant-mcp:', '');
             const body = `## 🐳 Development Build Successful
             
             The development Docker image has been built successfully!
@@ -88,7 +89,7 @@ jobs:
             To test locally:
             \`\`\`bash
             docker run -p 8000:8000 -p 8001:8001 -p 6333:6333 \\
-              ghcr.io/stigenai/qdrant-mcp:${tag}
+              ${tags[0]}
             \`\`\`
             `;
             
