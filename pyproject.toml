@@ -37,11 +37,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest==7.4.4",
-    "pytest-asyncio==0.21.1",
-    "pytest-cov==4.1.0",
-    "pytest-mock==3.12.0",
-    "pytest-timeout==2.2.0",
+    "pytest==8.4.1",
+    "pytest-asyncio==1.1.0",
+    "pytest-cov==6.2.1",
+    "pytest-mock==3.14.1",
+    "pytest-timeout==2.4.0",
     "respx==0.20.2",
     "factory-boy==3.3.0",
     "faker==22.0.0",
@@ -69,11 +69,11 @@ packages = ["."]
 
 [tool.uv]
 dev-dependencies = [
-    "pytest==7.4.4",
-    "pytest-asyncio==0.21.1",
-    "pytest-cov==4.1.0",
-    "pytest-mock==3.12.0",
-    "pytest-timeout==2.2.0",
+    "pytest==8.4.1",
+    "pytest-asyncio==1.1.0",
+    "pytest-cov==6.2.1",
+    "pytest-mock==3.14.1",
+    "pytest-timeout==2.4.0",
     "respx==0.20.2",
     "factory-boy==3.3.0",
     "faker==22.0.0",
