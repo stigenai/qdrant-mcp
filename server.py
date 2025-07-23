@@ -116,7 +116,7 @@ def count_tokens(text: str) -> int:
     return len(tokenizer.encode(text))
 
 
-async def wait_for_qdrant(max_retries: int = 30, delay: int = 1):
+async def wait_for_qdrant(max_retries: int = 30, delay: int = 1) -> bool:
     """Wait for Qdrant to be ready."""
     global qdrant_client
 
@@ -142,7 +142,7 @@ async def wait_for_qdrant(max_retries: int = 30, delay: int = 1):
     return False
 
 
-async def ensure_default_collection():
+async def ensure_default_collection() -> None:
     """Ensure the default collection exists."""
     try:
         qdrant_client.get_collection(cfg.vector.collection_name)
@@ -169,7 +169,7 @@ async def ensure_default_collection():
 
 # REST API Endpoints
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {
         "status": "healthy",
@@ -179,7 +179,7 @@ async def health_check():
 
 
 @app.get("/collections/{collection_name}")
-async def get_collection(collection_name: str):
+async def get_collection(collection_name: str) -> dict[str, Any]:
     """Get collection information."""
     try:
         if qdrant_client is None:
@@ -198,7 +198,7 @@ async def get_collection(collection_name: str):
 
 
 @app.post("/collections")
-async def create_collection(collection: CollectionInfo):
+async def create_collection(collection: CollectionInfo) -> dict[str, Any]:
     """Create a new collection."""
     try:
         distance_map = {
@@ -209,6 +209,8 @@ async def create_collection(collection: CollectionInfo):
 
         if qdrant_client is None:
             raise HTTPException(status_code=500, detail="Qdrant client not initialized")
+        if collection.vector_size is None:
+            raise HTTPException(status_code=400, detail="Vector size is required")
         qdrant_client.create_collection(
             collection_name=collection.name,
             vectors_config=models.VectorParams(
@@ -226,7 +228,7 @@ async def create_collection(collection: CollectionInfo):
 
 
 @app.post("/vectors/upsert")
-async def upsert_vectors(request: VectorUpsertRequest):
+async def upsert_vectors(request: VectorUpsertRequest) -> dict[str, Any]:
     """Upsert vectors to collection."""
     try:
         points = []
@@ -240,6 +242,8 @@ async def upsert_vectors(request: VectorUpsertRequest):
                 point.vector = embedder.encode(point.content).tolist()
 
             # Create Qdrant point
+            if point.vector is None:
+                raise HTTPException(status_code=400, detail="Vector is required")
             qdrant_point = models.PointStruct(
                 id=point.id or str(uuid.uuid4()),
                 vector=point.vector,
@@ -248,6 +252,8 @@ async def upsert_vectors(request: VectorUpsertRequest):
 
             # Add content to payload if provided
             if point.content:
+                if qdrant_point.payload is None:
+                    qdrant_point.payload = {}
                 qdrant_point.payload["content"] = point.content
                 qdrant_point.payload["tokens"] = count_tokens(point.content)
 
@@ -256,6 +262,8 @@ async def upsert_vectors(request: VectorUpsertRequest):
         # Upsert to Qdrant
         if qdrant_client is None:
             raise HTTPException(status_code=500, detail="Qdrant client not initialized")
+        if request.collection is None:
+            raise HTTPException(status_code=400, detail="Collection name is required")
         qdrant_client.upsert(collection_name=request.collection, points=points)
 
         return {
@@ -270,7 +278,7 @@ async def upsert_vectors(request: VectorUpsertRequest):
 
 
 @app.post("/vectors/search")
-async def search_vectors(request: VectorSearchRequest):
+async def search_vectors(request: VectorSearchRequest) -> dict[str, Any]:
     """Search for similar vectors."""
     try:
         # Generate query embedding
@@ -303,7 +311,7 @@ async def search_vectors(request: VectorSearchRequest):
 
 # MCP endpoint (when running as MCP server)
 @app.post("/mcp")
-async def handle_mcp_request(request: dict):
+async def handle_mcp_request(request: dict) -> dict[str, Any]:
     """Handle MCP protocol requests."""
     if not mcp_handler:
         raise HTTPException(status_code=503, detail="MCP handler not initialized")
@@ -316,7 +324,7 @@ async def handle_mcp_request(request: dict):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-async def run_mcp_mode():
+async def run_mcp_mode() -> None:
     """Run in MCP mode."""
     global qdrant_client, embedder, mcp_handler
 
@@ -337,7 +345,7 @@ async def run_mcp_mode():
     await mcp_handler.run_stdio()
 
 
-def setup_app(config: DictConfig):
+def setup_app(config: DictConfig) -> FastAPI:
     """Setup FastAPI app with configuration."""
     global cfg
     cfg = config

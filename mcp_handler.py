@@ -29,7 +29,7 @@ class MCPHandler:
         self.server = Server(config.mcp.server_name if config else "qdrant-mcp")
         self._setup_handlers()
 
-    def _setup_handlers(self):
+    def _setup_handlers(self) -> None:
         """Set up MCP protocol handlers."""
 
         @self.server.list_tools()
@@ -234,9 +234,10 @@ class MCPHandler:
             # Format results
             formatted_results = []
             for i, result in enumerate(results, 1):
-                content = result.payload.get("content", "")
+                payload = result.payload or {}
+                content = payload.get("content", "")
                 score = result.score
-                metadata = {k: v for k, v in result.payload.items() if k != "content"}
+                metadata = {k: v for k, v in payload.items() if k != "content"}
 
                 result_text = f"Result {i} (score: {score:.3f}):\n{content}"
                 if metadata:
@@ -304,7 +305,7 @@ class MCPHandler:
                 TextContent(type="text", text=f"Failed to create collection: {str(e)}")
             ]
 
-    async def run_stdio(self):
+    async def run_stdio(self) -> None:
         """Run MCP server in stdio mode."""
         logger.info("Starting MCP server in stdio mode...")
         await self.server.run(
