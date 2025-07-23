@@ -8,6 +8,7 @@ pydantic==2.5.3
 mcp==0.9.1
 httpx==0.25.2
 python-multipart==0.0.6
+pyyaml==6.0.1
 
 # Test dependencies
 pytest==7.4.4

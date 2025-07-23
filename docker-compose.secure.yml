@@ -33,6 +33,8 @@ services:
       # Persistent storage for Qdrant
       - qdrant-storage:/qdrant/storage:rw
       - qdrant-snapshots:/qdrant/snapshots:rw
+      # Configuration file (optional)
+      - ./config/config.yaml:/app/config/config.yaml:ro
     
     ports:
       - "127.0.0.1:8000:8000"  # REST API - bind only to localhost
@@ -45,8 +47,13 @@ services:
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - MCP_PORT=8001
+      # Database paths
+      - QDRANT_DATA_PATH=/qdrant/storage
+      - QDRANT_SNAPSHOTS_PATH=/qdrant/snapshots
       # Security: Disable telemetry
-      - QDRANT__TELEMETRY_DISABLED=true
+      - QDRANT_TELEMETRY_DISABLED=true
+      # Config file location
+      - QDRANT_MCP_CONFIG=/app/config/config.yaml
     
     # Run as non-root user (defined in Dockerfile)
     user: "1000:1000"

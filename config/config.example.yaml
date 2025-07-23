@@ -1,0 +1,59 @@
+# Qdrant MCP Configuration Example
+# Copy this file to config.yaml and modify as needed
+
+# Qdrant database configuration
+qdrant:
+  host: localhost
+  port: 6333
+  grpc_port: 6334
+  data_path: /qdrant/storage
+  snapshots_path: /qdrant/snapshots
+  max_payload_size_mb: 1
+  telemetry_disabled: true
+
+# Vector database configuration
+vector:
+  collection_name: claude_vectors
+  embedding_model: all-MiniLM-L6-v2
+  vector_size: 384
+  distance_metric: cosine
+  max_tokens: 512
+  top_k: 10
+  min_score: 0.22
+  on_disk_payload: false
+  indexed_only: true
+
+# REST API configuration
+api:
+  host: 0.0.0.0
+  port: 8000
+  workers: 1
+  reload: false
+  log_level: info
+  cors_origins:
+    - "*"
+  max_request_size_mb: 10
+
+# MCP server configuration
+mcp:
+  server_name: qdrant-mcp
+  server_version: 1.0.0
+  port: 8001
+  protocol_version: 2024-11-05
+
+# Logging configuration
+logging:
+  log_path: /var/log/supervisor
+  log_level: INFO
+  max_bytes: 10485760  # 10MB
+  backup_count: 3
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Security configuration
+security:
+  api_key: null  # Set to a secure key for production
+  enable_tls: false
+  tls_cert_path: null
+  tls_key_path: null
+  allowed_ips: null  # List of allowed IPs, null allows all
+  rate_limit_per_minute: 60

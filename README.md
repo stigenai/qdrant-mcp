@@ -141,13 +141,75 @@ Or use the stdio mode (requires container to be installed locally):
 }
 ```
 
-## Environment Variables
+## Configuration
 
-- `QDRANT_HOST`: Qdrant server host (default: localhost)
-- `QDRANT_PORT`: Qdrant server port (default: 6333)
-- `API_HOST`: API server host (default: 0.0.0.0)
-- `API_PORT`: API server port (default: 8000)
-- `MCP_PORT`: MCP HTTP server port (default: 8001)
+The server supports both environment variables and configuration files (YAML/JSON).
+
+### Configuration File
+
+Create a `config/config.yaml` file to customize settings:
+
+```yaml
+qdrant:
+  data_path: /custom/path/to/storage
+  snapshots_path: /custom/path/to/snapshots
+  
+vector:
+  collection_name: my_vectors
+  embedding_model: all-MiniLM-L6-v2
+  
+api:
+  port: 8080
+  
+security:
+  api_key: your-secret-key
+```
+
+Mount the config file in Docker:
+```bash
+docker run -v $(pwd)/config/config.yaml:/app/config/config.yaml:ro qdrant-mcp
+```
+
+### Environment Variables
+
+All settings can also be configured via environment variables:
+
+- **Qdrant Configuration**:
+  - `QDRANT_HOST`: Qdrant server host (default: localhost)
+  - `QDRANT_PORT`: Qdrant server port (default: 6333)
+  - `QDRANT_DATA_PATH`: Data storage path (default: /qdrant/storage)
+  - `QDRANT_SNAPSHOTS_PATH`: Snapshots path (default: /qdrant/snapshots)
+  - `QDRANT_TELEMETRY_DISABLED`: Disable telemetry (default: true)
+
+- **API Configuration**:
+  - `API_HOST`: API server host (default: 0.0.0.0)
+  - `API_PORT`: API server port (default: 8000)
+  - `MCP_PORT`: MCP HTTP server port (default: 8001)
+
+- **Vector Configuration**:
+  - `COLLECTION_NAME`: Default collection (default: claude_vectors)
+  - `EMBEDDING_MODEL`: Model name (default: all-MiniLM-L6-v2)
+  - `VECTOR_SIZE`: Vector dimensions (default: 384)
+  - `MAX_TOKENS`: Max tokens before vectorization (default: 512)
+
+- **Security Configuration**:
+  - `API_KEY`: Optional API key for authentication
+  - `ENABLE_TLS`: Enable HTTPS (default: false)
+
+### Generate Configuration
+
+Use the included script to generate configuration files:
+
+```bash
+# Generate default config
+python generate_config.py
+
+# Generate production config
+python generate_config.py --production --api-key $(openssl rand -base64 32)
+
+# Custom paths
+python generate_config.py --data-path /data/qdrant --snapshots-path /data/snapshots
+```
 
 ## Claude Hooks Integration
 

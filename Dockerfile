@@ -38,7 +38,7 @@ RUN groupadd -r qdrant --gid=1000 && \
     useradd -r -g qdrant --uid=1000 --home-dir=/app --shell=/bin/bash qdrant
 
 # Create necessary directories with correct permissions
-RUN mkdir -p /app /qdrant/storage /qdrant/snapshots /var/log/supervisor /var/run && \
+RUN mkdir -p /app /app/config /qdrant/storage /qdrant/snapshots /var/log/supervisor /var/run && \
     chown -R qdrant:qdrant /app /qdrant /var/log/supervisor /var/run
 
 # Copy Python packages from builder
@@ -59,7 +59,11 @@ RUN chmod +x /app/startup.sh
 
 # Update PATH for user-installed packages
 ENV PATH="/home/qdrant/.local/bin:${PATH}" \
-    PYTHONPATH="/home/qdrant/.local/lib/python3.11/site-packages:${PYTHONPATH}"
+    PYTHONPATH="/home/qdrant/.local/lib/python3.11/site-packages:${PYTHONPATH}" \
+    QDRANT_DATA_PATH="/qdrant/storage" \
+    QDRANT_SNAPSHOTS_PATH="/qdrant/snapshots" \
+    QDRANT_TELEMETRY_DISABLED="true" \
+    QDRANT_MCP_CONFIG="/app/config/config.yaml"
 
 # Security: Don't run as root
 USER qdrant
