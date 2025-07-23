@@ -1,0 +1,6 @@
+# MCP server configuration
+server_name: ${oc.env:MCP_SERVER_NAME,qdrant-mcp}
+server_version: ${oc.env:MCP_SERVER_VERSION,1.0.0}
+port: ${oc.env:MCP_PORT,8001}
+protocol_version: ${oc.env:MCP_PROTOCOL_VERSION,2024-11-05}
+stdio_mode: ${oc.env:MCP_STDIO_MODE,false}

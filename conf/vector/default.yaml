@@ -1,0 +1,10 @@
+# Vector database configuration
+collection_name: ${oc.env:COLLECTION_NAME,claude_vectors}
+embedding_model: ${oc.env:EMBEDDING_MODEL,multi-qa-mpnet-base-cos-v1}
+vector_size: ${oc.env:VECTOR_SIZE,768}
+distance_metric: ${oc.env:DISTANCE_METRIC,cosine}
+max_tokens: ${oc.env:MAX_TOKENS,512}
+top_k: ${oc.env:TOP_K,10}
+min_score: ${oc.env:MIN_SCORE,0.22}
+on_disk_payload: ${oc.env:ON_DISK_PAYLOAD,false}
+indexed_only: ${oc.env:INDEXED_ONLY,true}

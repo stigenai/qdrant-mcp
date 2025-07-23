@@ -1,0 +1,25 @@
+# Production configuration
+defaults:
+  - qdrant: default
+  - vector: default
+  - api: default
+  - mcp: default
+  - logging: default
+  - security: default
+
+# Production overrides
+qdrant:
+  telemetry_disabled: true
+  max_payload_size_mb: 10
+
+api:
+  reload: false
+  log_level: warning
+  cors_origins: ["https://your-domain.com"]
+
+logging:
+  log_level: WARNING
+
+security:
+  require_api_key: true
+  enable_ssl: true

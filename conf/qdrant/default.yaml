@@ -1,0 +1,8 @@
+# Qdrant database configuration
+host: ${oc.env:QDRANT_HOST,localhost}
+port: ${oc.env:QDRANT_PORT,6333}
+grpc_port: ${oc.env:QDRANT_GRPC_PORT,6334}
+data_path: ${oc.env:QDRANT_DATA_PATH,/qdrant/storage}
+snapshots_path: ${oc.env:QDRANT_SNAPSHOTS_PATH,/qdrant/snapshots}
+max_payload_size_mb: ${oc.env:QDRANT_MAX_PAYLOAD_SIZE_MB,1}
+telemetry_disabled: ${oc.env:QDRANT_TELEMETRY_DISABLED,true}

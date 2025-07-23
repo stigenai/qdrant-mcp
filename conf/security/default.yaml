@@ -1,0 +1,8 @@
+# Security configuration
+require_api_key: ${oc.env:REQUIRE_API_KEY,false}
+api_key: ${oc.env:API_KEY,null}
+enable_ssl: ${oc.env:ENABLE_SSL,false}
+ssl_certfile: ${oc.env:SSL_CERTFILE,null}
+ssl_keyfile: ${oc.env:SSL_KEYFILE,null}
+ssl_ca_certs: ${oc.env:SSL_CA_CERTS,null}
+ssl_cert_reqs: ${oc.env:SSL_CERT_REQS,CERT_NONE}

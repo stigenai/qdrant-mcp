@@ -10,16 +10,58 @@ A unified Docker container that runs both a Qdrant vector database server and pr
 - **Auto-embedding**: Automatically generates embeddings using sentence-transformers
 - **Claude Hooks Compatible**: Works with existing Claude vector hooks in `~/.claude/hooks/`
 
+## Prerequisites
+
+- Python 3.10+ 
+- [uv](https://github.com/astral-sh/uv) package manager
+- Docker (for containerized deployment)
+
+### Installing uv
+
+```bash
+# Install uv (recommended)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or via pip
+pip install uv
+```
+
 ## Quick Start
+
+### Local Development with uv
+
+```bash
+# Clone the repository
+git clone https://github.com/qdrant/mcp-server-qdrant.git
+cd mcp-server-qdrant
+
+# Install dependencies
+uv pip install --system -e ".[dev]"
+
+# Or using Makefile
+make install-dev
+
+# Run the server
+uv run python server.py
+
+# Run tests
+uv run pytest
+# Or using Makefile
+make test
+```
 
 ### Build the Docker Image
 
 ```bash
-# Standard build
+# Standard build (using uv)
 docker build -t qdrant-mcp .
 
-# Build with security scanning
-./build-secure.sh
+# Development build
+docker build -f Dockerfile.dev -t qdrant-mcp:dev .
+
+# Or using Makefile
+make docker-build
+make docker-build-dev
 ```
 
 ### Run the Container
@@ -27,6 +69,12 @@ docker build -t qdrant-mcp .
 ```bash
 # Basic usage
 docker run -p 8000:8000 -p 8001:8001 -p 6333:6333 -v qdrant-data:/qdrant/storage qdrant-mcp
+
+# Development mode with live code reload
+docker run -it --rm -p 8000:8000 -p 8001:8001 -p 6333:6333 \
+  -v $(pwd):/app \
+  -v qdrant-data:/qdrant/storage \
+  qdrant-mcp:dev
 
 # Secure production deployment (recommended)
 docker run -d --name qdrant-mcp \
@@ -209,6 +257,95 @@ python generate_config.py --production --api-key $(openssl rand -base64 32)
 
 # Custom paths
 python generate_config.py --data-path /data/qdrant --snapshots-path /data/snapshots
+```
+
+## Development
+
+### Setting Up Development Environment
+
+```bash
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Clone and enter the repository
+git clone https://github.com/qdrant/mcp-server-qdrant.git
+cd mcp-server-qdrant
+
+# Install all dependencies including dev tools
+uv pip install --system -e ".[dev]"
+# Or using Makefile
+make install-dev
+```
+
+### Development Workflow
+
+```bash
+# Format code
+uv run black .
+uv run ruff check --fix .
+# Or using Makefile
+make format
+
+# Run linting
+uv run ruff check .
+uv run black --check .
+# Or using Makefile
+make lint
+
+# Type checking
+uv run mypy .
+# Or using Makefile
+make type-check
+
+# Run tests
+uv run pytest -v
+uv run pytest --cov=.
+# Or using Makefile
+make test
+
+# Run servers locally
+uv run python server.py                    # REST API server
+uv run python mcp_server.py               # MCP HTTP server
+# Or using Makefile
+make run-server
+make run-mcp
+```
+
+### Using the Makefile
+
+The project includes a comprehensive Makefile for common tasks:
+
+```bash
+make help           # Show all available commands
+make install        # Install production dependencies
+make install-dev    # Install all dependencies including dev
+make test          # Run tests
+make format        # Format code
+make lint          # Lint code
+make type-check    # Type check with mypy
+make docker-build  # Build Docker image
+make docker-run    # Run Docker container
+make clean         # Clean up cache files
+```
+
+### Running with Hydra Configuration
+
+The project uses Hydra for configuration management:
+
+```bash
+# Run with default configuration
+uv run python server.py
+
+# Run with development configuration
+uv run python server.py --config-name=config_development
+
+# Override specific values
+uv run python server.py qdrant.port=6334 api.port=8080
+
+# Run in MCP stdio mode
+uv run python server.py mcp.stdio_mode=true
+
+# See CONFIG.md for full configuration documentation
 ```
 
 ## Claude Hooks Integration

@@ -7,6 +7,8 @@ import uuid
 from typing import Dict, List, Optional, Any
 from contextlib import asynccontextmanager
 
+import hydra
+from omegaconf import DictConfig
 import tiktoken
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -15,11 +17,9 @@ from pydantic import BaseModel
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
 
-import config
 from mcp_handler import MCPHandler
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Global instances
@@ -27,6 +27,7 @@ qdrant_client: Optional[QdrantClient] = None
 embedder: Optional[SentenceTransformer] = None
 tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
 mcp_handler: Optional[MCPHandler] = None
+cfg: Optional[DictConfig] = None
 
 
 @asynccontextmanager
@@ -40,10 +41,10 @@ async def lifespan(app: FastAPI):
         logger.error("Failed to connect to Qdrant, exiting...")
         sys.exit(1)
     # Initialize sentence transformer
-    logger.info(f"Loading embedding model: {config.EMBEDDING_MODEL}")
-    embedder = SentenceTransformer(config.EMBEDDING_MODEL)
+    logger.info(f"Loading embedding model: {cfg.vector.embedding_model}")
+    embedder = SentenceTransformer(cfg.vector.embedding_model)
     # Initialize MCP handler
-    mcp_handler = MCPHandler(qdrant_client, embedder)
+    mcp_handler = MCPHandler(qdrant_client, embedder, cfg)
     # Ensure default collection exists
     await ensure_default_collection()
     logger.info("API server startup complete")
@@ -55,18 +56,7 @@ async def lifespan(app: FastAPI):
 
 
 # Initialize FastAPI app
-app = FastAPI(
-    title="Qdrant MCP Server", version=config.MCP_SERVER_VERSION, lifespan=lifespan
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="Qdrant MCP Server", lifespan=lifespan)
 
 
 # Pydantic models
@@ -79,20 +69,39 @@ class VectorPoint(BaseModel):
 
 class VectorSearchRequest(BaseModel):
     query: str
-    collection: str = config.COLLECTION_NAME
-    limit: int = config.TOP_K
-    score_threshold: float = config.MIN_SCORE
+    collection: str = None
+    limit: int = None
+    score_threshold: float = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.collection is None:
+            self.collection = cfg.vector.collection_name
+        if self.limit is None:
+            self.limit = cfg.vector.top_k
+        if self.score_threshold is None:
+            self.score_threshold = cfg.vector.min_score
 
 
 class VectorUpsertRequest(BaseModel):
-    collection: str = config.COLLECTION_NAME
+    collection: str = None
     points: List[VectorPoint]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.collection is None:
+            self.collection = cfg.vector.collection_name
 
 
 class CollectionInfo(BaseModel):
     name: str
-    vector_size: int = config.VECTOR_SIZE
+    vector_size: int = None
     distance: str = "cosine"
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.vector_size is None:
+            self.vector_size = cfg.vector.vector_size
 
 
 # Helper functions
@@ -107,9 +116,7 @@ async def wait_for_qdrant(max_retries: int = 30, delay: int = 1):
 
     for i in range(max_retries):
         try:
-            qdrant_client = QdrantClient(
-                host=config.QDRANT_HOST, port=config.QDRANT_PORT
-            )
+            qdrant_client = QdrantClient(host=cfg.qdrant.host, port=cfg.qdrant.port)
             # Try to list collections to verify connection
             qdrant_client.get_collections()
             logger.info("Successfully connected to Qdrant")
@@ -129,14 +136,22 @@ async def wait_for_qdrant(max_retries: int = 30, delay: int = 1):
 async def ensure_default_collection():
     """Ensure the default collection exists."""
     try:
-        qdrant_client.get_collection(config.COLLECTION_NAME)
-        logger.info(f"Collection '{config.COLLECTION_NAME}' already exists")
+        qdrant_client.get_collection(cfg.vector.collection_name)
+        logger.info(f"Collection '{cfg.vector.collection_name}' already exists")
     except Exception:
-        logger.info(f"Creating collection '{config.COLLECTION_NAME}'")
+        logger.info(f"Creating collection '{cfg.vector.collection_name}'")
+        distance_map = {
+            "cosine": models.Distance.COSINE,
+            "euclidean": models.Distance.EUCLID,
+            "dot": models.Distance.DOT,
+        }
         qdrant_client.create_collection(
-            collection_name=config.COLLECTION_NAME,
+            collection_name=cfg.vector.collection_name,
             vectors_config=models.VectorParams(
-                size=config.VECTOR_SIZE, distance=models.Distance.COSINE
+                size=cfg.vector.vector_size,
+                distance=distance_map.get(
+                    cfg.vector.distance_metric, models.Distance.COSINE
+                ),
             ),
         )
 
@@ -147,7 +162,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "version": config.MCP_SERVER_VERSION,
+        "version": cfg.mcp.server_version,
         "qdrant_connected": qdrant_client is not None,
     }
 
@@ -279,27 +294,62 @@ async def run_mcp_mode():
     global qdrant_client, embedder, mcp_handler
 
     # Initialize Qdrant client
-    qdrant_client = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT)
+    qdrant_client = QdrantClient(host=cfg.qdrant.host, port=cfg.qdrant.port)
 
     # Initialize embedder
-    embedder = SentenceTransformer(config.EMBEDDING_MODEL)
+    embedder = SentenceTransformer(cfg.vector.embedding_model)
 
     # Initialize MCP handler
-    mcp_handler = MCPHandler(qdrant_client, embedder)
+    mcp_handler = MCPHandler(qdrant_client, embedder, cfg)
 
     # Run MCP server
     await mcp_handler.run_stdio()
 
 
-def main():
+def setup_app(config: DictConfig):
+    """Setup FastAPI app with configuration."""
+    global cfg
+    cfg = config
+
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.api.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Setup logging
+    logging.basicConfig(
+        level=getattr(logging, config.logging.log_level.upper()),
+        format=config.logging.format,
+    )
+
+    return app
+
+
+@hydra.main(version_base=None, config_path="conf", config_name="config")
+def main(config: DictConfig) -> None:
     """Main entry point."""
+    global cfg
+    cfg = config
+
     # Check if running as MCP server (stdio mode)
-    if len(sys.argv) > 1 and sys.argv[1] == "--mcp":
+    if config.mcp.get("stdio_mode", False):
         # Run in MCP mode
         asyncio.run(run_mcp_mode())
     else:
+        # Setup app
+        setup_app(config)
+
         # Run as REST API server
-        uvicorn.run(app, host=config.API_HOST, port=config.API_PORT, log_level="info")
+        uvicorn.run(
+            app,
+            host=config.api.host,
+            port=config.api.port,
+            log_level=config.api.log_level,
+        )
 
 
 if __name__ == "__main__":

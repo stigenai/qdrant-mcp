@@ -1,0 +1,20 @@
+# Default configuration for Qdrant MCP
+# Can be overridden via CLI args: python server.py qdrant.port=6334
+# Or environment variables: export QDRANT_PORT=6334
+
+defaults:
+  - qdrant: default
+  - vector: default
+  - api: default
+  - mcp: default
+  - logging: default
+  - security: default
+  - _self_
+
+# Allow environment variable interpolation
+# Use ${oc.env:VAR_NAME,default_value} syntax
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false

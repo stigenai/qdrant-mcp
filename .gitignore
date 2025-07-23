@@ -19,12 +19,17 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual Environment
 venv/
 ENV/
 env/
-.venv
+.venv/
+
+# uv specific
+uv.lock
+.python-version
 
 # IDE
 .vscode/
@@ -53,8 +58,18 @@ Thumbs.db
 # Testing
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.mypy_cache/
+.ruff_cache/
+.nox/
+.tox/
 
 # Model cache
 .cache/
 models/
+
+# Hydra outputs
+outputs/
+multirun/
+.hydra/

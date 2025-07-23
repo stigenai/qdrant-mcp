@@ -2,6 +2,9 @@
 # Stage 1: Build stage with full dependencies
 FROM python:3.11-slim AS builder
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -11,9 +14,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create app directory
 WORKDIR /app
 
-# Copy and install Python dependencies
-COPY requirements-runtime.txt .
-RUN pip install --no-cache-dir --user -r requirements-runtime.txt
+# Copy dependency files
+COPY pyproject.toml .
+COPY uv.lock* .
+
+# Install Python dependencies using uv
+RUN uv pip install --system --no-cache -r pyproject.toml
 
 # Stage 2: Qdrant base image
 FROM qdrant/qdrant:latest AS qdrant-base
@@ -42,7 +48,8 @@ RUN mkdir -p /app /app/config /qdrant/storage /qdrant/snapshots /var/log/supervi
     chown -R qdrant:qdrant /app /qdrant /var/log/supervisor /var/run
 
 # Copy Python packages from builder
-COPY --from=builder --chown=qdrant:qdrant /root/.local /home/qdrant/.local
+COPY --from=builder --chown=qdrant:qdrant /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder --chown=qdrant:qdrant /usr/local/bin /usr/local/bin
 
 # Set working directory
 WORKDIR /app
@@ -57,13 +64,12 @@ COPY --chown=qdrant:qdrant startup.sh /app/startup.sh
 # Make scripts executable
 RUN chmod +x /app/startup.sh
 
-# Update PATH for user-installed packages
-ENV PATH="/home/qdrant/.local/bin:${PATH}" \
-    PYTHONPATH="/home/qdrant/.local/lib/python3.11/site-packages:${PYTHONPATH}" \
-    QDRANT_DATA_PATH="/qdrant/storage" \
+# Environment variables
+ENV QDRANT_DATA_PATH="/qdrant/storage" \
     QDRANT_SNAPSHOTS_PATH="/qdrant/snapshots" \
     QDRANT_TELEMETRY_DISABLED="true" \
-    QDRANT_MCP_CONFIG="/app/config/config.yaml"
+    QDRANT_MCP_CONFIG="/app/config/config.yaml" \
+    UV_SYSTEM_PYTHON=1
 
 # Security: Don't run as root
 USER qdrant

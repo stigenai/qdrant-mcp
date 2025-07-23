@@ -2,25 +2,26 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+import hydra
+from omegaconf import DictConfig
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
-import config
 from mcp_handler import MCPHandler
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app for MCP
 app = FastAPI(title="Qdrant MCP HTTP Server")
 
-# Global MCP handler instance
+# Global instances
 mcp_handler = None
+cfg: Optional[DictConfig] = None
 
 
 @app.on_event("startup")
@@ -30,16 +31,16 @@ async def startup_event():
 
     # Initialize Qdrant client
     qdrant_client = QdrantClient(
-        host=os.getenv("QDRANT_HOST", "localhost"),
-        port=int(os.getenv("QDRANT_PORT", "6333")),
+        host=cfg.qdrant.host,
+        port=cfg.qdrant.port,
     )
 
     # Initialize embedder
-    logger.info(f"Loading embedding model: {config.EMBEDDING_MODEL}")
-    embedder = SentenceTransformer(config.EMBEDDING_MODEL)
+    logger.info(f"Loading embedding model: {cfg.vector.embedding_model}")
+    embedder = SentenceTransformer(cfg.vector.embedding_model)
 
     # Initialize MCP handler
-    mcp_handler = MCPHandler(qdrant_client, embedder)
+    mcp_handler = MCPHandler(qdrant_client, embedder, cfg)
     logger.info("MCP HTTP server initialized")
 
 
@@ -75,11 +76,11 @@ async def handle_mcp_request(request: Request) -> Response:
             response = {
                 "jsonrpc": "2.0",
                 "result": {
-                    "protocolVersion": "0.1.0",
+                    "protocolVersion": cfg.mcp.protocol_version,
                     "capabilities": {"tools": {}},
                     "serverInfo": {
-                        "name": config.MCP_SERVER_NAME,
-                        "version": config.MCP_SERVER_VERSION,
+                        "name": cfg.mcp.server_name,
+                        "version": cfg.mcp.server_version,
                     },
                 },
                 "id": request_id,
@@ -104,8 +105,8 @@ async def handle_mcp_request(request: Request) -> Response:
                             },
                             "collection": {
                                 "type": "string",
-                                "description": f"Collection name (default: {config.COLLECTION_NAME})",
-                                "default": config.COLLECTION_NAME,
+                                "description": f"Collection name (default: {cfg.vector.collection_name})",
+                                "default": cfg.vector.collection_name,
                             },
                         },
                         "required": ["content"],
@@ -123,18 +124,18 @@ async def handle_mcp_request(request: Request) -> Response:
                             },
                             "limit": {
                                 "type": "integer",
-                                "description": f"Number of results to return (default: {config.TOP_K})",
-                                "default": config.TOP_K,
+                                "description": f"Number of results to return (default: {cfg.vector.top_k})",
+                                "default": cfg.vector.top_k,
                             },
                             "score_threshold": {
                                 "type": "number",
-                                "description": f"Minimum similarity score (default: {config.MIN_SCORE})",
-                                "default": config.MIN_SCORE,
+                                "description": f"Minimum similarity score (default: {cfg.vector.min_score})",
+                                "default": cfg.vector.min_score,
                             },
                             "collection": {
                                 "type": "string",
-                                "description": f"Collection name (default: {config.COLLECTION_NAME})",
-                                "default": config.COLLECTION_NAME,
+                                "description": f"Collection name (default: {cfg.vector.collection_name})",
+                                "default": cfg.vector.collection_name,
                             },
                         },
                         "required": ["query"],
@@ -157,8 +158,8 @@ async def handle_mcp_request(request: Request) -> Response:
                             },
                             "vector_size": {
                                 "type": "integer",
-                                "description": f"Vector dimension size (default: {config.VECTOR_SIZE})",
-                                "default": config.VECTOR_SIZE,
+                                "description": f"Vector dimension size (default: {cfg.vector.vector_size})",
+                                "default": cfg.vector.vector_size,
                             },
                         },
                         "required": ["name"],
@@ -218,7 +219,23 @@ async def handle_mcp_request(request: Request) -> Response:
         )
 
 
+@hydra.main(version_base=None, config_path="conf", config_name="config")
+def main(config: DictConfig) -> None:
+    """Main entry point."""
+    global cfg
+    cfg = config
+
+    # Setup logging
+    logging.basicConfig(
+        level=getattr(logging, config.logging.log_level.upper()),
+        format=config.logging.format,
+    )
+
+    # Run MCP HTTP server
+    uvicorn.run(
+        app, host="0.0.0.0", port=config.mcp.port, log_level=config.api.log_level
+    )
+
+
 if __name__ == "__main__":
-    # Run MCP HTTP server on port 8001
-    mcp_port = int(os.getenv("MCP_PORT", "8001"))
-    uvicorn.run(app, host="0.0.0.0", port=mcp_port, log_level="info")
+    main()

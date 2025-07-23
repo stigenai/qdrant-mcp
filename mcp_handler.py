@@ -15,17 +15,22 @@ from mcp.types import (
 )
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
-
-import config
+from omegaconf import DictConfig
 
 logger = logging.getLogger(__name__)
 
 
 class MCPHandler:
-    def __init__(self, qdrant_client: QdrantClient, embedder: SentenceTransformer):
+    def __init__(
+        self,
+        qdrant_client: QdrantClient,
+        embedder: SentenceTransformer,
+        config: Optional[DictConfig] = None,
+    ):
         self.qdrant_client = qdrant_client
         self.embedder = embedder
-        self.server = Server(config.MCP_SERVER_NAME)
+        self.config = config
+        self.server = Server(config.mcp.server_name if config else "qdrant-mcp")
         self._setup_handlers()
 
     def _setup_handlers(self):
@@ -52,8 +57,12 @@ class MCPHandler:
                             },
                             "collection": {
                                 "type": "string",
-                                "description": f"Collection name (default: {config.COLLECTION_NAME})",
-                                "default": config.COLLECTION_NAME,
+                                "description": f"Collection name (default: {self.config.vector.collection_name if self.config else 'claude_vectors'})",
+                                "default": (
+                                    self.config.vector.collection_name
+                                    if self.config
+                                    else "claude_vectors"
+                                ),
                             },
                         },
                         "required": ["content"],
@@ -71,18 +80,28 @@ class MCPHandler:
                             },
                             "limit": {
                                 "type": "integer",
-                                "description": f"Number of results to return (default: {config.TOP_K})",
-                                "default": config.TOP_K,
+                                "description": f"Number of results to return (default: {self.config.vector.top_k if self.config else 10})",
+                                "default": (
+                                    self.config.vector.top_k if self.config else 10
+                                ),
                             },
                             "score_threshold": {
                                 "type": "number",
-                                "description": f"Minimum similarity score (default: {config.MIN_SCORE})",
-                                "default": config.MIN_SCORE,
+                                "description": f"Minimum similarity score (default: {self.config.vector.min_score if self.config else 0.22})",
+                                "default": (
+                                    self.config.vector.min_score
+                                    if self.config
+                                    else 0.22
+                                ),
                             },
                             "collection": {
                                 "type": "string",
-                                "description": f"Collection name (default: {config.COLLECTION_NAME})",
-                                "default": config.COLLECTION_NAME,
+                                "description": f"Collection name (default: {self.config.vector.collection_name if self.config else 'claude_vectors'})",
+                                "default": (
+                                    self.config.vector.collection_name
+                                    if self.config
+                                    else "claude_vectors"
+                                ),
                             },
                         },
                         "required": ["query"],
@@ -105,8 +124,12 @@ class MCPHandler:
                             },
                             "vector_size": {
                                 "type": "integer",
-                                "description": f"Vector dimension size (default: {config.VECTOR_SIZE})",
-                                "default": config.VECTOR_SIZE,
+                                "description": f"Vector dimension size (default: {self.config.vector.vector_size if self.config else 384})",
+                                "default": (
+                                    self.config.vector.vector_size
+                                    if self.config
+                                    else 384
+                                ),
                             },
                         },
                         "required": ["name"],
@@ -136,7 +159,10 @@ class MCPHandler:
         """Handle qdrant-store tool."""
         content = arguments.get("content", "")
         metadata = arguments.get("metadata", {})
-        collection = arguments.get("collection", config.COLLECTION_NAME)
+        collection = arguments.get(
+            "collection",
+            self.config.vector.collection_name if self.config else "claude_vectors",
+        )
 
         if not content:
             return [TextContent(text="Error: No content provided")]
@@ -157,7 +183,8 @@ class MCPHandler:
                 self.qdrant_client.create_collection(
                     collection_name=collection,
                     vectors_config=models.VectorParams(
-                        size=config.VECTOR_SIZE, distance=models.Distance.COSINE
+                        size=self.config.vector.vector_size if self.config else 384,
+                        distance=models.Distance.COSINE,
                     ),
                 )
 
@@ -180,9 +207,14 @@ class MCPHandler:
     async def _handle_find(self, arguments: Dict[str, Any]) -> List[TextContent]:
         """Handle qdrant-find tool."""
         query = arguments.get("query", "")
-        limit = arguments.get("limit", config.TOP_K)
-        score_threshold = arguments.get("score_threshold", config.MIN_SCORE)
-        collection = arguments.get("collection", config.COLLECTION_NAME)
+        limit = arguments.get("limit", self.config.vector.top_k if self.config else 10)
+        score_threshold = arguments.get(
+            "score_threshold", self.config.vector.min_score if self.config else 0.22
+        )
+        collection = arguments.get(
+            "collection",
+            self.config.vector.collection_name if self.config else "claude_vectors",
+        )
 
         if not query:
             return [TextContent(text="Error: No query provided")]
@@ -246,7 +278,9 @@ class MCPHandler:
     ) -> List[TextContent]:
         """Handle qdrant-create-collection tool."""
         name = arguments.get("name", "")
-        vector_size = arguments.get("vector_size", config.VECTOR_SIZE)
+        vector_size = arguments.get(
+            "vector_size", self.config.vector.vector_size if self.config else 384
+        )
 
         if not name:
             return [TextContent(text="Error: No collection name provided")]

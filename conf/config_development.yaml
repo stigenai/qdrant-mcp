@@ -1,0 +1,20 @@
+# Development configuration
+defaults:
+  - qdrant: default
+  - vector: default
+  - api: default
+  - mcp: default
+  - logging: default
+  - security: default
+
+# Development overrides
+api:
+  reload: true
+  log_level: debug
+
+logging:
+  log_level: DEBUG
+
+security:
+  require_api_key: false
+  enable_ssl: false
