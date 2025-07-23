@@ -141,6 +141,35 @@ The REST API endpoints are compatible with the operations performed by:
 - `precompact_vectorize.py`: Stores vectors
 - `retrieve_vectors.py`: Searches vectors
 
+### API-Based Hooks
+
+This repository includes API-based versions of the Claude vector hooks in the `hooks/` directory. These hooks communicate with the Qdrant MCP server via REST API instead of using a local Qdrant instance.
+
+#### Installation
+
+```bash
+# Run the setup script
+./hooks/setup.sh
+
+# Or manually create symlinks
+ln -sf "$(pwd)/hooks/precompact_vectorize.py" ~/.claude/hooks/precompact_vectorize_api.py
+ln -sf "$(pwd)/hooks/retrieve_vectors.py" ~/.claude/hooks/retrieve_vectors_api.py
+```
+
+#### Configuration
+
+Set the API endpoint (default: http://localhost:8000):
+```bash
+export QDRANT_MCP_API="http://your-server:8000"
+```
+
+#### Benefits
+
+- **No local dependencies**: Works without local Qdrant or sentence-transformers
+- **Centralized storage**: All vectors stored in the containerized Qdrant
+- **Server-side processing**: Embedding generation handled by the server
+- **Easy deployment**: Just point to your API endpoint
+
 ## Development
 
 To run locally without Docker:

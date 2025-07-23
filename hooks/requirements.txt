@@ -1,0 +1,4 @@
+# Requirements for API-based hooks
+requests>=2.31.0
+tiktoken>=0.5.2
+orjson>=3.9.10
