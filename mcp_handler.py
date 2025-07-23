@@ -146,10 +146,10 @@ class MCPHandler:
                 elif name == "qdrant-create-collection":
                     return await self._handle_create_collection(arguments)
                 else:
-                    return [TextContent(text=f"Unknown tool: {name}")]
+                    return [TextContent(type="text", text=f"Unknown tool: {name}")]
             except Exception as e:
                 logger.error(f"Tool {name} failed: {e}")
-                return [TextContent(text=f"Error: {str(e)}")]
+                return [TextContent(type="text", text=f"Error: {str(e)}")]
 
     async def _handle_store(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Handle qdrant-store tool."""
@@ -161,7 +161,7 @@ class MCPHandler:
         )
 
         if not content:
-            return [TextContent(text="Error: No content provided")]
+            return [TextContent(type="text", text="Error: No content provided")]
 
         try:
             # Generate embedding
@@ -194,11 +194,12 @@ class MCPHandler:
 
             return [
                 TextContent(
-                    text=f"Successfully stored content with ID: {point_id} in collection: {collection}"
+                    type="text",
+                    text=f"Successfully stored content with ID: {point_id} in collection: {collection}",
                 )
             ]
         except Exception as e:
-            return [TextContent(text=f"Failed to store content: {str(e)}")]
+            return [TextContent(type="text", text=f"Failed to store content: {str(e)}")]
 
     async def _handle_find(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Handle qdrant-find tool."""
@@ -213,7 +214,7 @@ class MCPHandler:
         )
 
         if not query:
-            return [TextContent(text="Error: No query provided")]
+            return [TextContent(type="text", text="Error: No query provided")]
 
         try:
             # Generate query embedding
@@ -228,7 +229,7 @@ class MCPHandler:
             )
 
             if not results:
-                return [TextContent(text="No relevant results found")]
+                return [TextContent(type="text", text="No relevant results found")]
 
             # Format results
             formatted_results = []
@@ -244,12 +245,13 @@ class MCPHandler:
 
             return [
                 TextContent(
+                    type="text",
                     text=f"Found {len(results)} results:\n\n"
-                    + "\n\n---\n\n".join(formatted_results)
+                    + "\n\n---\n\n".join(formatted_results),
                 )
             ]
         except Exception as e:
-            return [TextContent(text=f"Failed to search: {str(e)}")]
+            return [TextContent(type="text", text=f"Failed to search: {str(e)}")]
 
     async def _handle_list_collections(self) -> list[TextContent]:
         """Handle qdrant-list-collections tool."""
@@ -258,16 +260,19 @@ class MCPHandler:
             collection_names = [c.name for c in collections.collections]
 
             if not collection_names:
-                return [TextContent(text="No collections found")]
+                return [TextContent(type="text", text="No collections found")]
 
             return [
                 TextContent(
+                    type="text",
                     text="Collections:\n"
-                    + "\n".join(f"- {c}" for c in collection_names)
+                    + "\n".join(f"- {c}" for c in collection_names),
                 )
             ]
         except Exception as e:
-            return [TextContent(text=f"Failed to list collections: {str(e)}")]
+            return [
+                TextContent(type="text", text=f"Failed to list collections: {str(e)}")
+            ]
 
     async def _handle_create_collection(
         self, arguments: dict[str, Any]
@@ -279,7 +284,7 @@ class MCPHandler:
         )
 
         if not name:
-            return [TextContent(text="Error: No collection name provided")]
+            return [TextContent(type="text", text="Error: No collection name provided")]
 
         try:
             self.qdrant_client.create_collection(
@@ -290,11 +295,14 @@ class MCPHandler:
             )
             return [
                 TextContent(
-                    text=f"Successfully created collection '{name}' with vector size {vector_size}"
+                    type="text",
+                    text=f"Successfully created collection '{name}' with vector size {vector_size}",
                 )
             ]
         except Exception as e:
-            return [TextContent(text=f"Failed to create collection: {str(e)}")]
+            return [
+                TextContent(type="text", text=f"Failed to create collection: {str(e)}")
+            ]
 
     async def run_stdio(self):
         """Run MCP server in stdio mode."""

@@ -27,6 +27,8 @@ async def startup_event():
     global mcp_handler
 
     # Initialize Qdrant client
+    if cfg is None:
+        raise RuntimeError("Configuration not loaded")
     qdrant_client = QdrantClient(
         host=cfg.qdrant.host,
         port=cfg.qdrant.port,
@@ -44,6 +46,17 @@ async def startup_event():
 @app.post("/")
 async def handle_mcp_request(request: Request) -> Response:
     """Handle MCP JSON-RPC requests."""
+    if cfg is None:
+        return Response(
+            content=json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32603, "message": "Configuration not loaded"},
+                    "id": None,
+                }
+            ),
+            media_type="application/json",
+        )
     try:
         # Get request body
         body = await request.body()
@@ -70,6 +83,8 @@ async def handle_mcp_request(request: Request) -> Response:
 
         # Route to appropriate handler
         if method == "initialize":
+            if cfg is None:
+                raise RuntimeError("Configuration not loaded")
             response = {
                 "jsonrpc": "2.0",
                 "result": {
@@ -182,7 +197,7 @@ async def handle_mcp_request(request: Request) -> Response:
             else:
                 from mcp.types import TextContent
 
-                results = [TextContent(text=f"Unknown tool: {tool_name}")]
+                results = [TextContent(type="text", text=f"Unknown tool: {tool_name}")]
 
             response = {
                 "jsonrpc": "2.0",

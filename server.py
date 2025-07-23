@@ -36,13 +36,19 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up API server...")
     # Wait for Qdrant to be ready
+    if cfg is None:
+        raise RuntimeError("Configuration not loaded")
     if not await wait_for_qdrant():
         logger.error("Failed to connect to Qdrant, exiting...")
         sys.exit(1)
     # Initialize sentence transformer
+    if cfg is None:
+        raise RuntimeError("Configuration not loaded")
     logger.info(f"Loading embedding model: {cfg.vector.embedding_model}")
     embedder = SentenceTransformer(cfg.vector.embedding_model)
     # Initialize MCP handler
+    if qdrant_client is None or embedder is None:
+        raise RuntimeError("Dependencies not initialized")
     mcp_handler = MCPHandler(qdrant_client, embedder, cfg)
     # Ensure default collection exists
     await ensure_default_collection()
@@ -68,38 +74,39 @@ class VectorPoint(BaseModel):
 
 class VectorSearchRequest(BaseModel):
     query: str
-    collection: str = None
-    limit: int = None
-    score_threshold: float = None
+    collection: str | None = None
+    limit: int | None = None
+    score_threshold: float | None = None
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.collection is None:
-            self.collection = cfg.vector.collection_name
-        if self.limit is None:
-            self.limit = cfg.vector.top_k
-        if self.score_threshold is None:
-            self.score_threshold = cfg.vector.min_score
+        if cfg is not None:
+            if self.collection is None:
+                self.collection = cfg.vector.collection_name
+            if self.limit is None:
+                self.limit = cfg.vector.top_k
+            if self.score_threshold is None:
+                self.score_threshold = cfg.vector.min_score
 
 
 class VectorUpsertRequest(BaseModel):
-    collection: str = None
+    collection: str | None = None
     points: list[VectorPoint]
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.collection is None:
+        if cfg is not None and self.collection is None:
             self.collection = cfg.vector.collection_name
 
 
 class CollectionInfo(BaseModel):
     name: str
-    vector_size: int = None
+    vector_size: int | None = None
     distance: str = "cosine"
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.vector_size is None:
+        if cfg is not None and self.vector_size is None:
             self.vector_size = cfg.vector.vector_size
 
 
@@ -112,6 +119,9 @@ def count_tokens(text: str) -> int:
 async def wait_for_qdrant(max_retries: int = 30, delay: int = 1):
     """Wait for Qdrant to be ready."""
     global qdrant_client
+
+    if cfg is None:
+        raise RuntimeError("Configuration not loaded")
 
     for i in range(max_retries):
         try:
@@ -144,6 +154,8 @@ async def ensure_default_collection():
             "euclidean": models.Distance.EUCLID,
             "dot": models.Distance.DOT,
         }
+        if qdrant_client is None:
+            raise HTTPException(status_code=500, detail="Qdrant client not initialized")
         qdrant_client.create_collection(
             collection_name=cfg.vector.collection_name,
             vectors_config=models.VectorParams(
@@ -170,6 +182,8 @@ async def health_check():
 async def get_collection(collection_name: str):
     """Get collection information."""
     try:
+        if qdrant_client is None:
+            raise HTTPException(status_code=500, detail="Qdrant client not initialized")
         collection = qdrant_client.get_collection(collection_name)
         return {
             "name": collection_name,
@@ -193,6 +207,8 @@ async def create_collection(collection: CollectionInfo):
             "dot": models.Distance.DOT,
         }
 
+        if qdrant_client is None:
+            raise HTTPException(status_code=500, detail="Qdrant client not initialized")
         qdrant_client.create_collection(
             collection_name=collection.name,
             vectors_config=models.VectorParams(
@@ -217,6 +233,10 @@ async def upsert_vectors(request: VectorUpsertRequest):
         for point in request.points:
             # Generate embedding if content is provided but vector is not
             if point.content and not point.vector:
+                if embedder is None:
+                    raise HTTPException(
+                        status_code=500, detail="Embedder not initialized"
+                    )
                 point.vector = embedder.encode(point.content).tolist()
 
             # Create Qdrant point
@@ -234,6 +254,8 @@ async def upsert_vectors(request: VectorUpsertRequest):
             points.append(qdrant_point)
 
         # Upsert to Qdrant
+        if qdrant_client is None:
+            raise HTTPException(status_code=500, detail="Qdrant client not initialized")
         qdrant_client.upsert(collection_name=request.collection, points=points)
 
         return {
@@ -255,6 +277,10 @@ async def search_vectors(request: VectorSearchRequest):
         query_vector = embedder.encode(request.query).tolist()
 
         # Search in Qdrant
+        if qdrant_client is None:
+            raise HTTPException(status_code=500, detail="Qdrant client not initialized")
+        if embedder is None:
+            raise HTTPException(status_code=500, detail="Embedder not initialized")
         results = qdrant_client.search(
             collection_name=request.collection,
             query_vector=query_vector,
@@ -298,9 +324,13 @@ async def run_mcp_mode():
     qdrant_client = QdrantClient(host=cfg.qdrant.host, port=cfg.qdrant.port)
 
     # Initialize embedder
+    if cfg is None:
+        raise RuntimeError("Configuration not loaded")
     embedder = SentenceTransformer(cfg.vector.embedding_model)
 
     # Initialize MCP handler
+    if qdrant_client is None or embedder is None:
+        raise RuntimeError("Dependencies not initialized")
     mcp_handler = MCPHandler(qdrant_client, embedder, cfg)
 
     # Run MCP server
