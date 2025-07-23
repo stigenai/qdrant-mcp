@@ -155,7 +155,9 @@ async def ensure_default_collection() -> None:
             "dot": models.Distance.DOT,
         }
         if qdrant_client is None:
-            raise HTTPException(status_code=500, detail="Qdrant client not initialized")
+            raise HTTPException(
+                status_code=500, detail="Qdrant client not initialized"
+            ) from None
         qdrant_client.create_collection(
             collection_name=cfg.vector.collection_name,
             vectors_config=models.VectorParams(
