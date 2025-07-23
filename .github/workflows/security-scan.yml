@@ -74,17 +74,22 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Install dependencies
         run: |
-          pip install safety pip-audit
+          uv pip install --system safety pip-audit
 
       - name: Check with pip-audit
         run: |
-          pip-audit --desc --fix --dry-run
+          uv run pip-audit --desc --fix --dry-run
 
       - name: Check with safety
         run: |
-          safety check --json --output safety-report.json || true
+          uv run safety check --json --output safety-report.json || true
           
       - name: Upload security reports
         uses: actions/upload-artifact@v4
