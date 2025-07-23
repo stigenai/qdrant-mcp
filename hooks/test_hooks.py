@@ -9,7 +9,29 @@ import sys
 from pathlib import Path
 
 # Configuration
-API_ENDPOINT = os.environ.get("QDRANT_MCP_API", "http://localhost:8000")
+API_HOST = os.environ.get("QDRANT_MCP_HOST", "localhost")
+API_PORT = os.environ.get("QDRANT_MCP_PORT", "8000")
+API_ENDPOINT = os.environ.get("QDRANT_MCP_API", None)
+
+# Build endpoint if not explicitly provided
+if not API_ENDPOINT:
+    # Auto-detect HTTPS based on port or explicit HTTPS in host
+    if API_HOST.startswith("https://") or API_PORT == "443":
+        API_ENDPOINT = (
+            f"{API_HOST}:{API_PORT}" if not API_HOST.startswith("http") else API_HOST
+        )
+    else:
+        scheme = "https" if API_HOST.startswith("https://") else "http"
+        host = API_HOST.replace("https://", "").replace("http://", "")
+        API_ENDPOINT = f"{scheme}://{host}:{API_PORT}"
+else:
+    # Ensure API_ENDPOINT has a scheme
+    if not API_ENDPOINT.startswith(("http://", "https://")):
+        API_ENDPOINT = f"http://{API_ENDPOINT}"
+
+# HTTPS configuration
+IS_HTTPS = API_ENDPOINT.startswith("https://")
+VERIFY_SSL = os.environ.get("QDRANT_MCP_VERIFY_SSL", "true").lower() == "true"
 
 
 def test_api_connectivity():

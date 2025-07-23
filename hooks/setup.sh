@@ -60,17 +60,38 @@ echo
 echo "Configuration:"
 echo "=============="
 echo
-echo "The hooks use the QDRANT_MCP_API environment variable for the API endpoint."
-echo "Default: http://localhost:8000"
+echo "The hooks support flexible endpoint configuration:"
 echo
-echo "To use a different endpoint, set the environment variable:"
-echo "  export QDRANT_MCP_API=\"http://your-server:8000\""
+echo "Basic configuration:"
+echo "  export QDRANT_MCP_API=\"http://localhost:8000\"  # Complete endpoint"
+echo "  # OR"
+echo "  export QDRANT_MCP_HOST=\"localhost\""
+echo "  export QDRANT_MCP_PORT=\"8000\""
 echo
-echo "You can add this to your shell profile (~/.bashrc, ~/.zshrc, etc.)"
+echo "HTTPS configuration (auto-detected from https:// URLs):"
+echo "  export QDRANT_MCP_API=\"https://your-server:8443\""
+echo "  export QDRANT_MCP_VERIFY_SSL=\"true\"              # Verify certificates (default)"
+echo "  export QDRANT_MCP_CA_BUNDLE=\"/path/to/ca.pem\"    # Custom CA certificate"
+echo
+echo "You can add these to your shell profile (~/.bashrc, ~/.zshrc, etc.)"
 echo
 
-# Check if API is accessible
-API_ENDPOINT="${QDRANT_MCP_API:-http://localhost:8000}"
+# Build API endpoint for testing
+API_HOST="${QDRANT_MCP_HOST:-localhost}"
+API_PORT="${QDRANT_MCP_PORT:-8000}"
+API_ENDPOINT="${QDRANT_MCP_API:-}"
+
+if [ -z "$API_ENDPOINT" ]; then
+    if [[ "$API_HOST" == https://* ]] || [ "$API_PORT" = "443" ]; then
+        if [[ "$API_HOST" == http* ]]; then
+            API_ENDPOINT="$API_HOST:$API_PORT"
+        else
+            API_ENDPOINT="https://$API_HOST:$API_PORT"
+        fi
+    else
+        API_ENDPOINT="http://$API_HOST:$API_PORT"
+    fi
+fi
 echo "Checking API connectivity at $API_ENDPOINT..."
 if curl -s -f "$API_ENDPOINT/health" > /dev/null 2>&1; then
     echo "✓ API is accessible"

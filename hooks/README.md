@@ -11,11 +11,55 @@ The hooks provide the same functionality as the original Claude vector hooks but
 
 ## Configuration
 
-Both hooks use the `QDRANT_MCP_API` environment variable to specify the API endpoint. The default is `http://localhost:8000`.
+The hooks support flexible configuration through environment variables:
+
+### Basic Configuration
 
 ```bash
-# Set custom API endpoint
-export QDRANT_MCP_API="http://your-qdrant-server:8000"
+# Option 1: Set complete API endpoint (auto-detects HTTPS from URL)
+export QDRANT_MCP_API="https://your-qdrant-server:8443"
+
+# Option 2: Set host and port separately
+export QDRANT_MCP_HOST="your-qdrant-server"  # or "https://your-qdrant-server"
+export QDRANT_MCP_PORT="8000"
+
+# If not set, defaults to http://localhost:8000
+```
+
+### HTTPS Configuration
+
+HTTPS is automatically enabled when:
+- The API endpoint starts with `https://`
+- The host starts with `https://`
+- The port is set to `443`
+
+```bash
+# SSL/TLS Certificate Options
+export QDRANT_MCP_VERIFY_SSL="true"              # Verify SSL certificates (default: true)
+export QDRANT_MCP_SSL_CERT="/path/to/cert.pem"   # Path to SSL certificate file
+export QDRANT_MCP_CA_BUNDLE="/path/to/ca.pem"    # Path to CA bundle file
+export QDRANT_MCP_CA_CERTS_DIR="/path/to/certs"  # Directory containing CA certificates
+
+# Disable SSL verification (not recommended for production)
+export QDRANT_MCP_VERIFY_SSL="false"
+```
+
+### Example Configurations
+
+```bash
+# Local development (HTTP)
+export QDRANT_MCP_API="http://localhost:8000"
+
+# Production with HTTPS
+export QDRANT_MCP_API="https://qdrant.example.com:8443"
+
+# HTTPS with custom CA certificate
+export QDRANT_MCP_API="https://qdrant.internal:8443"
+export QDRANT_MCP_CA_BUNDLE="/etc/ssl/certs/company-ca.pem"
+
+# HTTPS with self-signed certificate (development only)
+export QDRANT_MCP_API="https://localhost:8443"
+export QDRANT_MCP_VERIFY_SSL="false"
 ```
 
 ## Installation
