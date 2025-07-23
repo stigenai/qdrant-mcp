@@ -150,6 +150,70 @@ To run locally without Docker:
 3. Start Qdrant server
 4. Run the API server: `python server.py`
 
+### Running Tests
+
+The project includes comprehensive unit tests with mocking for local development.
+
+#### Install Test Dependencies
+```bash
+pip install -r requirements.txt  # Includes test dependencies
+```
+
+#### Run All Tests
+```bash
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=. --cov-report=html --cov-report=term
+
+# Run specific test file
+pytest tests/unit/test_rest_api.py
+
+# Run with verbose output
+pytest -v
+
+# Run with test timing
+pytest --durations=10
+```
+
+#### Test Structure
+```
+tests/
+├── conftest.py           # Shared fixtures and mocks
+├── unit/
+│   ├── test_config.py    # Configuration tests
+│   ├── test_mcp_handler.py  # MCP handler tests
+│   ├── test_rest_api.py     # REST API endpoint tests
+│   └── test_mcp_server.py   # MCP HTTP server tests
+└── __init__.py
+```
+
+#### Key Features of Tests
+- **No Docker/Qdrant Required**: All tests use mocks, so you can run them without Docker or Qdrant
+- **Fast Execution**: Mocked dependencies make tests run quickly
+- **Comprehensive Coverage**: Tests cover all major functionality
+- **Async Support**: Tests properly handle async operations
+
+#### Running Specific Test Categories
+```bash
+# Run only unit tests
+pytest tests/unit/
+
+# Run tests matching a pattern
+pytest -k "test_store"
+
+# Run tests with specific markers (when added)
+pytest -m "unit"
+```
+
+#### Continuous Integration
+Tests automatically run on GitHub Actions for:
+- Multiple Python versions (3.10, 3.11, 3.12)
+- Code formatting checks (black)
+- Docker build verification
+- Service health checks
+
 ## License
 
 MIT
