@@ -195,7 +195,7 @@ jobs:
           uv run pytest tests/unit/test_config.py --cov=config.py --cov-report=xml --cov-report=term || echo "Some tests failed but continuing..."
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
